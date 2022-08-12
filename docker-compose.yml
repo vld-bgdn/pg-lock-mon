@@ -49,9 +49,9 @@ services:
         - "9187:9187"
   app:
     hostname: app1
-    image: lock-emu-app
+    image: app
     build:
-      context: ./psql-dlock-test
+      context: ./psql-dlock-app
       dockerfile: ./Dockerfile
     depends_on:
       - postgres
