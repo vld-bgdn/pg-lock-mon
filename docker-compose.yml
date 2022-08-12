@@ -1,0 +1,62 @@
+
+version: '3'
+services:
+  prometheus:
+    hostname: prometheus1
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/var/lib/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - 9090
+   grafana:
+    hostname: grafana1
+    image: grafana/grafana:latest
+    volumes:
+            - ./grafana/grafana.ini:/etc/grafana/grafana.ini
+            - ./grafana/datasources:/etc/grafana/provisioning/datasources
+            - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+    ports:
+      - 3000
+  postgres:
+    hostname: postgres1
+    image: postgres:latest
+    environment:
+      APP_DB: app_db
+      APP_USER: app_user
+      APP_PASS: app_pass
+      EXPORTER_PASS: exporter_pass
+    volumes:
+      - ./postgres/db_conf.sh:/docker-entrypoint-initdb.d/db_conf.sh
+    ports:
+      - "5432:5432"
+  postgres_exporter:
+      hostname: postgre_exportre1
+      image: prometheuscommunity/postgres-exporter:v0.10.0
+      environment:
+        DATA_SOURCE_URI: "postgres1:5432/app_db?sslmode=disable"
+        DATA_SOURCE_USER: "exporter_user"
+        DATA_SOURCE_PASS: "exporter_pass"
+        PG_EXPORTER_EXTEND_QUERY_PATH: "/etc/postgres_exporter/queries.yaml"
+      volumes:
+       - ./postgres_exporter/queries.yaml:/etc/postgres_exporter/queries.yaml:ro
+      ports:
+        - "9187:9187"
+  app:
+    hostname: app1
+    image: lock-emu-app
+    build:
+      context: ./psql-dlock-test
+      dockerfile: ./Dockerfile
+    depends_on:
+      - postgres
+      - postgres_exporter
+      - prometheus
+      - grafana
+    environment:
+      - PSQL_URI=postgresql+psycopg2://app_user:app_pass@postgres1/app_db?sslmode=disable
