@@ -1,4 +1,4 @@
-# pg-lock-mon
+# pg-lock-mon-prom
 
 
 Database template
